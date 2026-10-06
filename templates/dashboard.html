@@ -1,0 +1,59 @@
+{% extends "base.html" %}{% block title %}Dashboard{% endblock %}
+{% block body %}
+<p class="hint">Totals cover <strong>all saved expenses</strong>. Revenue and budget are the amounts you entered in Budget &amp; Reports.</p>
+{% include "_warning.html" %}
+<div class="dash">
+  <div class="card stat"><span>Total Revenue</span><strong>{{ revenue|rm }}</strong></div>
+  <div class="card stat"><span>Planned Budget</span><strong>{{ budget|rm }}</strong></div>
+  <div class="card stat spent"><span>Total Spent</span><strong>{{ total|rm }}</strong></div>
+  <div class="card stat {{ 'neg' if remaining < 0 else 'good' }}"><span>Remaining Budget</span><strong>{{ remaining|rm }}</strong></div>
+
+  <div class="card">
+    <h3>Budget Progress</h3>
+    <div class="meter"><div class="fill {{ level }}" style="width: {{ [pct or 0, 100]|min }}%"></div></div>
+    {% if pct is none %}
+      <p class="big">No budget set</p>
+      <p class="hint">Set a planned budget in <a href="{{ url_for('reports') }}">Budget &amp; Reports</a> to see your progress.</p>
+    {% else %}
+      <p class="big {{ level }}">{{ pct }}% used</p>
+      <ul class="info">
+        <li><span>Spent</span><b>{{ total|rm }} of {{ budget|rm }}</b></li>
+        <li><span>Remaining amount</span><b class="{{ 'neg-text' if remaining < 0 }}">{{ remaining|rm }}</b></li>
+        <li><span>Remaining percentage</span><b class="{{ 'neg-text' if remaining_pct < 0 }}">{{ remaining_pct }}%</b></li>
+        <li><span>Transactions</span><b>{{ count }}</b></li>
+        <li><span>Status</span><b class="{{ 'neg-text' if level == 'over' }}">{{ {'ok':'On track','warn':'Warning: 80% or more used','over':'Over budget'}[level] }}</b></li>
+      </ul>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>Daily Spending Trend <small>(latest 14 days with expenses)</small></h3>
+    {% if points %}
+    <svg viewBox="0 0 400 190" class="line-chart" role="img" aria-label="Daily spending line chart">
+      <line x1="30" y1="15" x2="30" y2="165" class="axis"/><line x1="30" y1="165" x2="380" y2="165" class="axis"/>
+      <text x="26" y="19" text-anchor="end">{{ (maxday / 100)|round|int }}</text><text x="26" y="165" text-anchor="end">0</text>
+      <polyline points="{{ line }}" class="trend"/>
+      {% for p in points %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="4" class="dot"><title>{{ p.d }}: {{ p.t|rm }}</title></circle>{% endfor %}
+      <text x="{{ points[0].x }}" y="183" text-anchor="middle">{{ points[0].d[5:] }}</text>
+      {% if points|length > 1 %}<text x="{{ points[-1].x }}" y="183" text-anchor="middle">{{ points[-1].d[5:] }}</text>{% endif %}
+    </svg>
+    <p class="hint">Vertical axis: spending per day in RM. Hover a point to see the exact amount.</p>
+    {% else %}<p class="empty">No expenses yet. <a href="{{ url_for('add_expense') }}">Add one</a>.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h3>Spending by Category</h3>
+    {% for c in cats %}
+    <div class="hrow"><span>{{ c.category }}</span><div class="meter thin"><div class="fill ok" style="width: {{ (c.t / total * 100)|round|int }}%"></div></div><b>{{ c.t|rm }}</b></div>
+    {% else %}<p class="empty">Nothing to show yet.</p>{% endfor %}
+  </div>
+
+  <div class="card">
+    <h3>Recent Transaction</h3>
+    {% for r in recent %}
+    <div class="recent"><span>{{ r.description }}<small>{{ r.expense_date }} &middot; {{ r.category }}</small></span><b>{{ r.amount_cents|rm }}</b></div>
+    {% else %}<p class="empty">No transactions yet.</p>{% endfor %}
+    <p><a href="{{ url_for('manage') }}">View all</a></p>
+  </div>
+</div>
+{% endblock %}

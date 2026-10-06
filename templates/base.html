@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Farm Expenses{% endblock %} - Farm Expense Management</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% if session.user_id %}
+{% set ep = request.endpoint %}
+{% set pages = {'dashboard':'Dashboard','add_expense':'Add Expense','manage':'Manage Expenses','edit_expense':'Edit Expense','reports':'Budget & Reports','settings':'Settings'} %}
+{% set initials = (session.user_name.split()|map('first')|join)[:2]|upper %}
+<header class="topbar">
+  <div class="top-title">Farm Expense System <span class="sep">|</span> {{ pages.get(ep, '') }}</div>
+  <div class="top-right">
+    <span class="top-name">{{ session.user_name }}</span>
+    <form method="post" action="{{ url_for('logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="icon-btn" title="Log out" aria-label="Log out">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v9"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/></svg>
+      </button>
+    </form>
+    <span class="avatar">{{ initials }}</span>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <nav>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'on' if ep == 'dashboard' }}">📊 Dashboard</a>
+      <a href="{{ url_for('add_expense') }}" class="{{ 'on' if ep == 'add_expense' }}">➕ Add Expense</a>
+      <a href="{{ url_for('manage') }}" class="{{ 'on' if ep in ('manage','edit_expense') }}">📋 Manage Expenses</a>
+      <a href="{{ url_for('reports') }}" class="{{ 'on' if ep == 'reports' }}">💰 Budget &amp; Reports</a>
+      <a href="{{ url_for('settings') }}" class="{{ 'on' if ep == 'settings' }}">⚙️ Settings</a>
+    </nav>
+    <div class="profile">
+      <span class="avatar">{{ initials }}</span>
+      <div><b>{{ session.user_name }}</b><small>{{ session.get('user_email', '') }}</small></div>
+    </div>
+  </aside>
+  <main class="content">
+{% else %}
+  <main class="auth">
+    <div class="auth-brand"><span class="logo">🌾</span><h1>Farm Expense Management</h1><p>Replace handwritten records with clear digital ones.</p></div>
+{% endif %}
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, m in msgs %}<div class="msg {{ cat }}" role="alert">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    {% block body %}{% endblock %}
+  </main>
+{% if session.user_id %}</div>{% endif %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

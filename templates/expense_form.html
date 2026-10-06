@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% block title %}{{ 'Edit' if editing else 'Add' }} Expense{% endblock %}
+{% block body %}
+<form method="post" class="card row-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>{{ 'Edit Expense Details' if editing else 'Enter Expense Details' }}</h2>
+  <label>Expense Category
+    <select name="category" required>
+      <option value="">Choose...</option>
+      {% for c in categories %}<option {{ 'selected' if v.category == c }}>{{ c }}</option>{% endfor %}
+    </select></label>
+  <label>Description
+    <input name="description" maxlength="200" required value="{{ v.description or '' }}"></label>
+  <label>Amount (RM)
+    <input type="number" name="amount" step="0.01" min="0.01" required value="{{ v.amount or '' }}"></label>
+  <label>Transaction Date
+    <input type="date" name="expense_date" required value="{{ v.expense_date or '' }}"></label>
+  <label>Target Crop (optional)
+    <input name="crop" maxlength="60" placeholder="e.g. Paddy, Chilli, Corn" value="{{ v.crop or '' }}"></label>
+  <label>Payment Method
+    <select name="payment_method" required>
+      <option value="">Choose...</option>
+      {% for p in payments %}<option {{ 'selected' if v.payment_method == p }}>{{ p }}</option>{% endfor %}
+    </select></label>
+  <div class="actions center">
+    <button class="btn">{{ 'Save Changes' if editing else 'Save Expense' }}</button>
+    <a class="btn ghost" href="{{ url_for('manage') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

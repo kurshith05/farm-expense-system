@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block title %}Settings{% endblock %}
+{% block body %}
+<form method="post" class="card inline-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="profile">
+  <h3>Profile</h3>
+  <label>Name <input name="name" required value="{{ user.name }}"></label>
+  <p class="hint">Email: {{ user.email }} (cannot be changed in this version)</p>
+  <button class="btn">Save profile</button>
+</form>
+<form method="post" class="card inline-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="password">
+  <h3>Change password</h3>
+  <label>Current password <input type="password" name="current_password" required></label>
+  <label>New password (at least 8 characters) <input type="password" name="new_password" minlength="8" required></label>
+  <button class="btn">Change password</button>
+</form>
+<div class="card">
+  <h3>Sample data (optional)</h3>
+  <p class="hint">Adds 8 example expenses so you can try the dashboard. Each description starts with <strong>[SAMPLE]</strong>. It is never added automatically. You currently have <strong>{{ sample_count }}</strong> sample record(s).</p>
+  <div class="actions">
+    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="sample_add"><button class="btn ghost">Add sample expenses</button></form>
+    {% if sample_count %}<form method="post" data-confirm="Remove all [SAMPLE] expenses? Your real records are kept."><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="sample_remove"><button class="btn danger">Remove sample expenses</button></form>{% endif %}
+  </div>
+</div>
+{% endblock %}

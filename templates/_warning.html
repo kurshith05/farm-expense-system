@@ -1,0 +1,3 @@
+{% if level == 'over' %}<div class="msg error"><strong>Overspending:</strong> you have used {{ pct }}% of your planned budget. You are over by {{ (-remaining if remaining is defined else all_total - budget)|rm }}.</div>
+{% elif level == 'warn' %}<div class="msg warn"><strong>Budget warning:</strong> you have used {{ pct }}% of your planned budget (80% or more).</div>
+{% elif level == 'none' %}<div class="msg info">No planned budget set yet. <a href="{{ url_for('reports') }}">Set your budget</a> to track spending.</div>{% endif %}

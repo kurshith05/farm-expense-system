@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}Log in{% endblock %}
+{% block body %}
+<div class="card narrow">
+  <h2>Log in</h2>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Email <input type="email" name="email" required autofocus></label>
+    <label>Password <input type="password" name="password" required></label>
+    <button class="btn">Log in</button>
+  </form>
+  <p class="hint">No account? <a href="{{ url_for('register') }}">Register</a>.
+  Password reset needs email sending to be set up, so it is a future improvement.</p>
+</div>
+{% endblock %}

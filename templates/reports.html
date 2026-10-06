@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% block title %}Budget &amp; Reports{% endblock %}
+{% block body %}
+<div class="no-print">
+{% include "_warning.html" %}
+<form method="post" class="card inline-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h3>Planned budget and revenue (RM)</h3>
+  <label>Planned budget <input type="number" name="budget" step="0.01" min="0" required value="{{ budget_text }}"></label>
+  <label>Total revenue <input type="number" name="revenue" step="0.01" min="0" required value="{{ revenue_text }}"></label>
+  <button class="btn">Save budget</button>
+</form>
+<form method="get" class="card filters">
+  <label>From <input type="date" name="start" value="{{ f.start }}"></label>
+  <label>To <input type="date" name="end" value="{{ f.end }}"></label>
+  <label>Crop <input name="crop" value="{{ f.crop }}"></label>
+  <div class="actions"><button class="btn">Generate report</button><a class="btn ghost" href="{{ url_for('reports') }}">Clear</a></div>
+</form>
+</div>
+
+<section class="card report">
+  <div class="between"><h3>Expense summary</h3>
+    <button class="btn ghost no-print" data-print type="button">Print / Save as PDF</button></div>
+  <p class="hint">Generated {{ today }} &middot; From: {{ f.start or 'start' }} &middot; To: {{ f.end or 'today' }} &middot; Crop: {{ f.crop or 'all' }}
+  <br>Planned budget: {{ budget|rm }} &middot; Revenue: {{ revenue|rm }}. Percentages are shown against the <strong>full planned budget</strong>.</p>
+  {% if rows %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Category</th><th class="num">Transactions</th><th class="num">Total spending</th><th class="num">% of planned budget</th></tr></thead>
+    <tbody>
+    {% for r in rows %}<tr><td>{{ r.category }}</td><td class="num">{{ r.n }}</td><td class="num">{{ r.t|rm }}</td>
+      <td class="num">{{ ((r.t / budget * 100)|round(1) ~ '%') if budget > 0 else 'n/a' }}</td></tr>{% endfor %}
+    </tbody>
+    <tfoot><tr><th>Total</th><th class="num">{{ count }}</th><th class="num">{{ total|rm }}</th>
+      <th class="num">{{ ((total / budget * 100)|round(1) ~ '%') if budget > 0 else 'n/a' }}</th></tr></tfoot>
+  </table></div>
+  {% else %}<p class="empty">No expenses match these filters.</p>{% endif %}
+</section>
+{% endblock %}

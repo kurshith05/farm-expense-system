@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% block title %}Manage Expenses{% endblock %}
+{% block body %}
+<form method="get" class="card filters">
+  <label>Search description <input name="q" value="{{ f.q }}"></label>
+  <label>From <input type="date" name="start" value="{{ f.start }}"></label>
+  <label>To <input type="date" name="end" value="{{ f.end }}"></label>
+  <label>Category
+    <select name="category"><option value="">All</option>
+      {% for c in categories %}<option {{ 'selected' if f.category == c }}>{{ c }}</option>{% endfor %}
+    </select></label>
+  <label>Crop <input name="crop" value="{{ f.crop }}"></label>
+  <div class="actions">
+    <button class="btn">Apply filters</button>
+    <a class="btn ghost" href="{{ url_for('manage') }}">Clear</a>
+  </div>
+</form>
+
+<p class="summary"><strong>{{ rows|length }}</strong> matching transaction(s), total <strong>{{ total|rm }}</strong>
+  {% if rows %}<a class="btn ghost small" href="{{ url_for('export_csv', **request.args) }}">Export CSV</a>{% endif %}</p>
+
+{% if rows %}
+<div class="table-wrap"><table>
+  <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Crop</th><th>Payment</th><th class="num">Amount</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td>{{ r.expense_date }}</td><td>{{ r.category }}</td><td>{{ r.description }}</td>
+    <td>{{ r.crop or '-' }}</td><td>{{ r.payment_method }}</td><td class="num">{{ r.amount_cents|rm }}</td>
+    <td class="row-actions">
+      <a href="{{ url_for('edit_expense', expense_id=r.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('delete_expense', expense_id=r.id) }}" data-confirm="Delete this expense? This cannot be undone.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="link-btn danger">Delete</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<div class="card empty">No expenses match. <a href="{{ url_for('add_expense') }}">Add your first expense</a> or clear the filters.</div>
+{% endif %}
+{% endblock %}
