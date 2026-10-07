@@ -7,6 +7,8 @@
     <label>Name <input name="name" required autofocus></label>
     <label>Email <input type="email" name="email" required></label>
     <label>Password (at least 8 characters) <input type="password" name="password" minlength="8" required></label>
+    <label>Confirm password <input type="password" name="confirm_password" minlength="8" required></label>
+    <label>Confirm password <input type="password" name="confirm_password" minlength="8" required></label>
     <button class="btn">Register</button>
   </form>
   <p class="hint">Already registered? <a href="{{ url_for('login') }}">Log in</a>.</p>

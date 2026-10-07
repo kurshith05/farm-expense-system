@@ -28,7 +28,7 @@
     <td>{{ r.crop or '-' }}</td><td>{{ r.payment_method }}</td><td class="num">{{ r.amount_cents|rm }}</td>
     <td class="row-actions">
       <a href="{{ url_for('edit_expense', expense_id=r.id) }}">Edit</a>
-      <form method="post" action="{{ url_for('delete_expense', expense_id=r.id) }}" data-confirm="Delete this expense? This cannot be undone.">
+      <form method="post" action="{{ url_for('delete_expense', expense_id=r.id) }}" data-confirm="Delete '{{ r.description }}' ({{ r.amount_cents|rm }})? This cannot be undone.">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="link-btn danger">Delete</button>
       </form>

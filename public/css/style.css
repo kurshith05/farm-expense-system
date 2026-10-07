@@ -125,3 +125,7 @@ tfoot th{background:var(--mint)}
 
 /* Header colour: soft white-to-green */
 .topbar{background:linear-gradient(90deg,#ffffff 0%,#e3f3e7 100%);border-bottom:2px solid var(--green)}
+
+/* Show the short name (FEMS) on small screens */
+.top-title .short{display:none}
+@media(max-width:760px){.top-title .full{display:none}.top-title .short{display:inline}}

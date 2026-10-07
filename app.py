@@ -22,6 +22,8 @@ if PRODUCTION and not os.environ.get("SECRET_KEY"):
     raise RuntimeError("SECRET_KEY must be set on the live server.")
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or os.urandom(24).hex()
 app.config["SESSION_COOKIE_SECURE"] = PRODUCTION   # cookies only over HTTPS when live
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)   # auto-logout after 30 min idle
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)   # auto logout after 30 min idle
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 CSRFProtect(app)                   # every POST form must contain csrf_token
@@ -58,6 +60,22 @@ def rm(cents):                     # 12345 -> "RM 123.45"
     return f"RM {cents / 100:,.2f}"
 
 
+@app.after_request
+def no_store_when_logged_in(resp):
+    """Stop the browser Back button showing private pages after logout."""
+    if "user_id" in session:
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.after_request
+def no_store(resp):
+    """Stop browsers caching pages, so the Back button cannot show private data after logout."""
+    if request.endpoint not in (None, "static"):
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 # ---------- login protection ----------
 def login_required(view):
     @wraps(view)
@@ -76,8 +94,13 @@ def register():
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
         pw = request.form.get("password", "")
-        if not name or not EMAIL_RE.match(email) or len(pw) < 8:
-            flash("Enter your name, a valid email, and a password of at least 8 characters.", "error")
+        if (not name or len(name) > 100 or not EMAIL_RE.match(email) or len(email) > 254
+                or not 8 <= len(pw) <= 128):
+            flash("Enter your name (up to 100 characters), a valid email, and a password of 8 to 128 characters.", "error")
+        elif pw != request.form.get("confirm_password", ""):
+            flash("Password and confirmation do not match.", "error")
+        elif pw != request.form.get("confirm_password", ""):
+            flash("Password and confirmation do not match.", "error")
         else:
             db = get_db()
             if db.execute("SELECT 1 FROM users WHERE email=%s", (email,)).fetchone():
@@ -97,6 +120,8 @@ def login():
         user = get_db().execute("SELECT * FROM users WHERE email=%s", (email,)).fetchone()
         if user and check_password_hash(user["password_hash"], request.form.get("password", "")):
             session.clear()
+            session.permanent = True
+            session.permanent = True
             session["user_id"], session["user_name"] = user["id"], user["name"]
             session["user_email"] = user["email"]
             return redirect(url_for("dashboard"))
@@ -126,6 +151,8 @@ def read_expense_form(form):
     v["amount"] = form.get("amount", "").strip()
     if v["category"] not in CATEGORIES: errors.append("Choose a category.")
     if not v["description"]: errors.append("Description is required.")
+    elif len(v["description"]) > 200: errors.append("Description must be 200 characters or fewer.")
+    if len(v["crop"]) > 60: errors.append("Crop must be 60 characters or fewer.")
     if v["payment_method"] not in PAYMENTS: errors.append("Choose a payment method.")
     try:
         datetime.strptime(v["expense_date"], "%Y-%m-%d")
@@ -205,9 +232,25 @@ def delete_expense(expense_id):
 
 
 # ---------- manage: search, filters, CSV ----------
+def date_filter_error(f):
+    """Return a message if the start/end dates are invalid or in the wrong order."""
+    try:
+        for k in ("start", "end"):
+            if f[k]:
+                datetime.strptime(f[k], "%Y-%m-%d")
+    except ValueError:
+        return "Enter valid dates for the date range."
+    if f["start"] and f["end"] and f["start"] > f["end"]:
+        return "The start date must not be after the end date."
+    return None
+
 def filtered_expenses():
     """Build one parameterised query from the filters (used by page and CSV)."""
     f = {k: request.args.get(k, "").strip() for k in ("q", "start", "end", "category", "crop")}
+    err = date_filter_error(f)
+    if err:
+        flash(err, "error")
+        return [], f
     sql, params = "SELECT * FROM expenses WHERE user_id=%s", [session["user_id"]]
     if f["q"]:        sql += " AND description ILIKE %s";  params.append(f"%{f['q']}%")
     if f["start"]:    sql += " AND expense_date >= %s";   params.append(f["start"])
@@ -231,11 +274,11 @@ def export_csv():
     out = io.StringIO()
     w = csv.writer(out)
     w.writerow(["Date", "Category", "Description", "Crop", "Payment method", "Amount (RM)"])
+    def safe(text):  # stop spreadsheet programs from running text as a formula
+        return "'" + text if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
     for r in rows:
-        # Prefix risky cells so Excel does not run them as formulas
-        desc = ("'" + r["description"]) if r["description"][:1] in "=+-@" else r["description"]
-        w.writerow([r["expense_date"], r["category"], desc, r["crop"],
-                    r["payment_method"], f"{r['amount_cents'] / 100:.2f}"])
+        w.writerow([r["expense_date"], safe(r["category"]), safe(r["description"]), safe(r["crop"]),
+                    safe(r["payment_method"]), f"{r['amount_cents'] / 100:.2f}"])
     return Response(out.getvalue(), mimetype="text/csv",
                     headers={"Content-Disposition": "attachment; filename=expenses.csv"})
 
@@ -259,8 +302,8 @@ def settings():
         action = request.form.get("action")
         if action == "profile":
             name = request.form.get("name", "").strip()
-            if not name:
-                flash("Name cannot be empty.", "error")
+            if not name or len(name) > 100:
+                flash("Name must be 1 to 100 characters.", "error")
             else:
                 db.execute("UPDATE users SET name=%s WHERE id=%s", (name, uid))
                 db.commit()
@@ -271,44 +314,16 @@ def settings():
             new = request.form.get("new_password", "")
             if not check_password_hash(user["password_hash"], request.form.get("current_password", "")):
                 flash("Current password is incorrect.", "error")
-            elif len(new) < 8:
-                flash("New password must be at least 8 characters.", "error")
+            elif not 8 <= len(new) <= 128:
+                flash("New password must be 8 to 128 characters.", "error")
             else:
                 db.execute("UPDATE users SET password_hash=%s WHERE id=%s",
                            (generate_password_hash(new), uid))
                 db.commit()
                 flash("Password changed.", "success")
-        elif action == "sample_add":
-            today = date.today()
-            for days, cat, desc, cents, crop, pay in SAMPLE:
-                db.execute("""INSERT INTO expenses(user_id,category,description,amount_cents,
-                              expense_date,crop,payment_method) VALUES(%s,%s,%s,%s,%s,%s,%s)""",
-                           (uid, cat, "[SAMPLE] " + desc, cents,
-                            (today - timedelta(days=days)).isoformat(), crop, pay))
-            db.commit()
-            flash("Sample expenses added. Each one starts with [SAMPLE].", "success")
-        elif action == "sample_remove":
-            db.execute("DELETE FROM expenses WHERE user_id=%s AND description LIKE '[SAMPLE]%%'", (uid,))
-            db.commit()
-            flash("Sample expenses removed. Your real records were not touched.", "success")
         return redirect(url_for("settings"))
     user = db.execute("SELECT name,email FROM users WHERE id=%s", (uid,)).fetchone()
-    n = db.execute("SELECT COUNT(*) AS n FROM expenses WHERE user_id=%s AND description LIKE '[SAMPLE]%%'",
-                   (uid,)).fetchone()["n"]
-    return render_template("settings.html", user=user, sample_count=n)
-
-
-# ---------- sample data (optional, always labelled) ----------
-SAMPLE = [  # (days ago, category, description, cents, crop, payment)
-    (1, "Seeds", "Paddy seed 50kg", 18500, "Paddy", "Cash"),
-    (2, "Fertilizer", "NPK fertilizer 10 bags", 42000, "Paddy", "Bank Transfer"),
-    (3, "Labour", "Weeding workers", 30000, "Chilli", "Cash"),
-    (4, "Fuel", "Diesel for tractor", 12000, "Paddy", "Card"),
-    (6, "Pesticide", "Insecticide spray", 15500, "Chilli", "E-wallet"),
-    (8, "Transportation", "Lorry to market", 9000, "Corn", "Cash"),
-    (11, "Equipment", "Sprayer repair", 21000, "Corn", "Bank Transfer"),
-    (13, "Seeds", "Corn seed", 8000, "Corn", "Cash"),
-]
+    return render_template("settings.html", user=user)
 
 
 # ---------- dashboard and budget helpers ----------
@@ -374,12 +389,31 @@ def reports():
             flash("Budget and revenue saved.", "success")
         return redirect(url_for("reports"))
     f = {k: request.args.get(k, "").strip() for k in ("start", "end", "crop")}
+    err = date_filter_error(f)
+    if err:
+        flash(err, "error")
     sql, params = "FROM expenses WHERE user_id=%s", [uid]
-    if f["start"]: sql += " AND expense_date >= %s"; params.append(f["start"])
-    if f["end"]:   sql += " AND expense_date <= %s"; params.append(f["end"])
+    if err:
+        sql += " AND FALSE"          # invalid date range: show no results
+    else:
+        if f["start"]: sql += " AND expense_date >= %s"; params.append(f["start"])
+        if f["end"]:   sql += " AND expense_date <= %s"; params.append(f["end"])
     if f["crop"]:  sql += " AND crop ILIKE %s";       params.append(f"%{f['crop']}%")
-    rows = db.execute("SELECT category, COUNT(*) AS n, CAST(SUM(amount_cents) AS BIGINT) AS t " + sql +
-                      " GROUP BY category ORDER BY t DESC", params).fetchall()
+    problem = None
+    for key in ("start", "end"):
+        if f[key]:
+            try:
+                datetime.strptime(f[key], "%Y-%m-%d")
+            except ValueError:
+                problem = "Enter valid dates for the report."
+    if not problem and f["start"] and f["end"] and f["start"] > f["end"]:
+        problem = "The start date must not be after the end date."
+    if problem:
+        flash(problem, "error")
+        rows = []
+    else:
+        rows = db.execute("SELECT category, COUNT(*) AS n, CAST(SUM(amount_cents) AS BIGINT) AS t " + sql +
+                          " GROUP BY category ORDER BY t DESC", params).fetchall()
     budget, revenue = get_budget(uid)
     pct, level = budget_status(all_total(uid), budget)
     return render_template("reports.html", rows=rows, f=f, budget=budget, revenue=revenue,

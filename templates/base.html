@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Farm Expenses{% endblock %} - Farm Expense Management</title>
+  <title>{% block title %}Farm Expenses{% endblock %} - FEMS</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -12,7 +12,7 @@
 {% set pages = {'dashboard':'Dashboard','add_expense':'Add Expense','manage':'Manage Expenses','edit_expense':'Edit Expense','reports':'Budget & Reports','settings':'Settings'} %}
 {% set initials = (session.user_name.split()|map('first')|join)[:2]|upper %}
 <header class="topbar">
-  <div class="top-title">Farm Expense System <span class="sep">|</span> {{ pages.get(ep, '') }}</div>
+  <div class="top-title"><span class="full">Farm Expense Management System</span><span class="short">FEMS</span> <span class="sep">|</span> {{ pages.get(ep, '') }}</div>
   <div class="top-right">
     <span class="top-name">{{ session.user_name }}</span>
     <form method="post" action="{{ url_for('logout') }}">
@@ -41,7 +41,7 @@
   <main class="content">
 {% else %}
   <main class="auth">
-    <div class="auth-brand"><span class="logo">🌾</span><h1>Farm Expense Management</h1><p>Replace handwritten records with clear digital ones.</p></div>
+    <div class="auth-brand"><span class="logo">🌾</span><h1>Farm Expense Management System</h1><p><strong>FEMS</strong></p><p>Replace handwritten records with clear digital ones.</p></div>
 {% endif %}
     {% with msgs = get_flashed_messages(with_categories=true) %}
       {% for cat, m in msgs %}<div class="msg {{ cat }}" role="alert">{{ m }}</div>{% endfor %}

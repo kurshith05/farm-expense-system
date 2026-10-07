@@ -1,4 +1,4 @@
-# Farm Expense Management System
+# Farm Expense Management System (FEMS)
 
 Flask (Python) + HTML/CSS/JS + Postgres database hosted on Supabase. Deployed on Vercel from GitHub.
 
@@ -25,7 +25,7 @@ Flask (Python) + HTML/CSS/JS + Postgres database hosted on Supabase. Deployed on
 - Edit, then delete (confirmation appears). Dashboard figures change after each.
 - Manage Expenses: search, date range, category, crop together; count and total update; Export CSV matches.
 - Budget & Reports: save budget/revenue; negative values rejected; 80% warning and over-100% warning; category summary; Print / Save as PDF.
-- Settings: change name and password; add/remove [SAMPLE] data (real records untouched).
+- Settings: change name and password.
 - Register a second user: they see none of the first user's data, and `/expenses/1/edit` gives "Not Found".
 
 ## Known limits
